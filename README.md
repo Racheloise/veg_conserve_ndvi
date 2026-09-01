@@ -17,3 +17,11 @@
 **Data availability:** 2000 to present (latest data approximately 1-2 months behind real-time due to processing lag)
 
 **Use case:** Suitable for 10+ year vegetation trends and climate-scale changes where 1 km resolution is adequate. Monthly compositing reduces cloud contamination and atmospheric noise compared to daily observations.
+
+File to run in GEE is: Javascript to run code directly in GEE for veg_conservation_ndvi.txt (but does not include water mask in the NDVI)
+
+Google Colab (ndvi_dashboard_GEE.ipynb): To extract and aggregate image collection
+
+Python notebook (< >) : To produce visualisation maps using folium
+
+Map for production (" "): .html map
