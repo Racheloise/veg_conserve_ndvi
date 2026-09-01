@@ -1,0 +1,93 @@
+// Load MODIS NDVI data
+var modis = ee.ImageCollection('MODIS/061/MOD13A2')
+  .select('NDVI');
+
+// Define your conservation areas (from your geojson)
+var areas = ee.FeatureCollection([
+  ee.Feature(ee.Geometry.Rectangle([-122.6, 37.95, -122.45, 38.08]), {area_id: 1, area_name: 'North Preserve'}),
+  ee.Feature(ee.Geometry.Rectangle([-122.42, 37.88, -122.25, 38.0]), {area_id: 2, area_name: 'East Wetlands'}),
+  ee.Feature(ee.Geometry.Rectangle([-122.58, 37.72, -122.4, 37.86]), {area_id: 3, area_name: 'South Forest'}),
+  ee.Feature(ee.Geometry.Rectangle([-122.78, 37.8, -122.62, 37.96]), {area_id: 4, area_name: 'West Hills'})
+]);
+
+print('MODIS data loaded');
+print('Conservation areas defined:', areas.size());
+
+// Filter for current year growing season (May-September 2024)
+var currentYear = 2024;
+var modis_current = modis
+  .filterDate(currentYear + '-05-01', currentYear + '-09-30')
+  .filterBounds(areas);
+
+// Calculate median NDVI for current year
+var current_median = modis_current.median().divide(10000);
+
+print('Current year NDVI images found:', modis_current.size());
+print('Current median NDVI calculated');
+
+// Filter for historical baseline (2014-2023, same season)
+var baseline_start = 2014;
+var baseline_end = 2023;
+var modis_baseline = modis
+  .filterDate(baseline_start + '-05-01', baseline_end + '-09-30')
+  .filterBounds(areas);
+
+// Calculate median NDVI for baseline period
+var baseline_median = modis_baseline.median().divide(10000);
+
+print('Baseline year range:', baseline_start + ' to ' + baseline_end);
+print('Baseline NDVI images found:', modis_baseline.size());
+print('Baseline median NDVI calculated');
+
+// Calculate anomaly (current - baseline)
+var anomaly = current_median.subtract(baseline_median);
+
+print('Anomaly calculated (current - baseline)');
+
+// Visualize the anomaly on the map
+Map.centerObject(areas, 9);
+var anomaly_vis = {
+  min: -0.3,
+  max: 0.3,
+  palette: ['brown', 'white', 'green']
+};
+Map.addLayer(anomaly, anomaly_vis, 'NDVI Anomaly');
+
+// Summarize anomaly by conservation area
+var anomaly_by_area = anomaly.reduceRegions({
+  collection: areas,
+  reducer: ee.Reducer.median(),
+  scale: 250  // MODIS pixel size is 250m
+});
+
+print('Anomaly summarized by area');
+print('Sample results:', anomaly_by_area.first());
+
+// Add current and baseline values to results
+var results = anomaly_by_area.map(function(feature) {
+  var cur = current_median.reduceRegion({
+    geometry: feature.geometry(),
+    reducer: ee.Reducer.mean(),
+    scale: 250
+  });
+  var base = baseline_median.reduceRegion({
+    geometry: feature.geometry(),
+    reducer: ee.Reducer.mean(),
+    scale: 250
+  });
+  return feature.set({
+    'current_ndvi': cur.get('NDVI'),
+    'baseline_ndvi': base.get('NDVI'),
+    'anomaly': feature.get('median')
+  });
+});
+
+print('Final results:', results.first());
+
+Export.table.toDrive({
+  collection: results,
+  description: 'ndvi_anomaly_dashboard_data',
+  fileFormat: 'CSV'
+});
+
+print('Export task created. Check Tasks tab.');
