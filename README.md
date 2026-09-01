@@ -22,6 +22,6 @@ File to run in GEE is: Javascript to run code directly in GEE for veg_conservati
 
 Google Colab (ndvi_dashboard_GEE.ipynb): To extract and aggregate image collection
 
-Python notebook (< >) : To produce visualisation maps using folium
+Map for production ("vegetation_dashboard.html")
 
-Map for production (" "): .html map
+Script for producing the map ("vegetation_dashboard.py")
